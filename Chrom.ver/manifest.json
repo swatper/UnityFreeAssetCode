@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "유니티 에셋 무료 코드 알림",
+  "version": "1.0",
+  "description": "매주 금요일 유니티 에셋 무료 코드를 알려줍니다.",
+  "permissions": [
+    "alarms",
+    "notifications",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://assetstore.unity.com/*"
+  ],
+  "background": {
+    "service_worker": "index.js"
+  },
+  "icons":{
+    "48": "icon48.png"
+  }
+}
