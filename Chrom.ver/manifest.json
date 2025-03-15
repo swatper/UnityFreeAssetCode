@@ -6,7 +6,9 @@
   "permissions": [
     "alarms",
     "notifications",
-    "storage"
+    "storage",
+    "clipboardWrite",
+    "tabs"
   ],
   "host_permissions": [
     "https://assetstore.unity.com/*"
@@ -14,6 +16,12 @@
   "background": {
     "service_worker": "index.js"
   },
+  "content_scripts": [
+  {
+    "matches": ["https://assetstore.unity.com/*"],
+    "js": ["CopyCoupon.js"]
+  }
+  ],
   "icons":{
     "48": "icon48.png"
   }

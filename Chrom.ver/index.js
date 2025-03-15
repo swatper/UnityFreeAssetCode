@@ -17,9 +17,14 @@ chrome.alarms.create("checkFreeAssets", {
 //크롬을 켤때마다 실행
 chrome.runtime.onStartup.addListener(() => {
   //알람 설정
-  chrome.alarms.create("runOnStartup", {
-    when : Date.now() + 5000,
-  });
+  const now = new Date();
+    // 오늘이 금요일이면 시작 시 알람을 설정하지 않음
+    if (now.getDay() !== 5) {
+        // 알람 설정
+        chrome.alarms.create("runOnStartup", {
+            when: Date.now() + 5000,
+        });
+    }
 });
 
 //알람이 울릴 때 실행
@@ -31,6 +36,63 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 chrome.alarms.getAll((alarms) => {
   console.log("현재 알람 목록:", alarms);
+});
+
+//상품 페이지 로드 감지
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  chrome.storage.local.get(["lastAssetUrl", "lastAssetCode"], (data) => {
+      if (changeInfo.status === "complete" && tab.url === data.lastAssetUrl) {
+          //쿠폰 코드 알림 생성
+          chrome.notifications.create("couponCodeNotification", {
+              type: "basic",
+              iconUrl: "icon48.png",
+              title: "유니티 에셋 무료 쿠폰 코드!",
+              message: `쿠폰 코드: ${data.lastAssetCode}`,
+              buttons: [{ title: "쿠폰 코드 복사하기" }],
+          });
+      }
+  });
+});
+
+//버튼 기능 설정
+chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) => {
+  //상품 페이지 이동 버튼
+  if (notificationId === "freeAssetNotification" && buttonIndex === 0) {
+    chrome.storage.local.get("lastAssetUrl", (data) => {
+      if (data.lastAssetUrl) {
+        chrome.tabs.create({ url: data.lastAssetUrl });
+      } 
+      else {
+        chrome.tabs.create({ url: "https://assetstore.unity.com/ko-KR/publisher-sale" });
+      }
+    });
+  }
+  //쿠폰 복사 버튼
+  if (notificationId === "couponCodeNotification" && buttonIndex === 0) {
+    chrome.storage.local.get("lastAssetCode", (data) => {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs.length > 0) {
+          chrome.tabs.sendMessage(tabs[0].id, { action: "copyToClipboard", text: data.lastAssetCode }, (response) => {
+            if (response && response.success) {
+              chrome.notifications.create("couponCodeNotification", {
+                type: "basic",
+                iconUrl: "icon48.png",
+                title: "유니티 에셋 무료 쿠폰 코드!",
+                message: "쿠폰 코드가 클립보드에 복사되었습니다."
+              });
+            } else {
+              chrome.notifications.create("couponCodeNotification", {
+                type: "basic",
+                iconUrl: "icon48.png",
+                title: "유니티 에셋 무료 쿠폰 코드!",
+                message: "쿠폰 복사 실패"
+              });
+            }
+          });
+        }
+      });
+    });
+  }
 });
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -63,7 +125,6 @@ async function checkFreeAssets() {
         return;
       }
     });
-
 
     //로컬에 쿠폰이랑 상품 페이지 주소 저장
     chrome.storage.local.set({ lastAssetCode: couponCode, lastAssetUrl: assetUrl });
@@ -109,17 +170,3 @@ async function getCouponCodeData(url) {
     return null;
   }
 }
-
-//알림 버튼 클릭 시 페이지 열기
-chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) => {
-  if (notificationId === "freeAssetNotification" && buttonIndex === 0) {
-    chrome.storage.local.get("lastAssetUrl", (data) => {
-      if (data.lastAssetUrl) {
-        chrome.tabs.create({ url: data.lastAssetUrl });
-      } 
-      else {
-        chrome.tabs.create({ url: "https://assetstore.unity.com/ko-KR/publisher-sale" });
-      }
-    });
-  }
-});
